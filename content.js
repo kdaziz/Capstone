@@ -24,7 +24,7 @@ function onLinkClick(e) {
 	else elem = e.target; 
 	chrome.extension.sendMessage(
 		{"type":"linkclicked",
-		 "from":document.url,
+		 "from":document.URL,
 		 "to": elem.href,
 		 "context": elem.innerHTML,
 		 "title": elem.title,
