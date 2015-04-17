@@ -11,102 +11,124 @@ var module = module || null;
 var page = require('./page.js');
 var cypher = require('./cypher.js');
 
-var createPageNode = function(body, cb) {
-	visit = visit || false;
-	// If the page node exists,
-	// update page node contents with contents of pagenode in body
-	// else create a new page node
-	if (body.pageNode !== null) {
-		var doesPageNodeExistCallback = function(pageNode) {
-			if (pageNode !== null) {
-				cypher.updatePageNode(body.pageNode, visit, cb);
+var getGraph = function(cb) {
+	cypher.getGraph(cb);
+}
+
+var createPageNode = function(pageNode, cb) {
+	if (pageNode !== null) {
+		var doesPageNodeExistCallback = function(responseNode) {
+			if (responseNode !== null) {
+				cb({'error':'pageNode already exists'});
 			} else {
-				cypher.createPageNode(body.pageNode, visit, cb);
+				cypher.createPageNode(pageNode, false, cb);
 			}
 		};
-		cypher.getPageNodeByUrl(body.pageNode.url, doesPageNodeExistCallback);
+		cypher.getPageNodeByUrl(pageNode.url, doesPageNodeExistCallback);
 	} else {
 		cb({'error':'pageNode required'});
 	}
 };
 
-var createEdge = function(body, cb) {
-	if (pageNode)
-};
-
-var updatePageNode = function(body, cb, visit) {
-	visit = visit || false;
-	// If the page node exists,
-	// update page node contents with contents of pagenode in body
-	// else create a new page node
-	if (body.pageNode !== null) {
-		var doesPageNodeExistCallback = function(pageNode) {
-			if (pageNode !== null) {
-				cypher.updatePageNode(body.pageNode, visit, cb);
-			} else {
-				cypher.createPageNode(body.pageNode, visit, cb);
-			}
-		};
-		cypher.getPageNodeByUrl(body.pageNode.url, doesPageNodeExistCallback);
-	} else {
-		cb({'error':'pageNode required'});
-	}
-};
-
-var updateEdge = function(body, cb, visit) {
-	visit = visit || false;
-	// If the edge exists
-	// update edge contents
-	// else create a new edge
-	if (body.edge !== null) {
-		var doesEdgeExistCallback = function(edge) {
-			if (edge !== null) {
-				cypher.updateEdge(body.edge, true, cb);
+var createEdge = function(edge, cb) {
+	if (edge !== null) {
+		var doesEdgeExistCallback = function(responseEdge) {
+			if (responseEdge !== null) {
+				cb({'error':'edge already exists'});
 			} else {
 				var getPageNodeCallback = function (pageNode) {
 					if (pageNode !== null) {
-						cypher.createEdge(body.edge, visit, cb);
+						cypher.createEdge(edge, false, cb);
 					} else {
-						var toNode = new page.PageNode(body.edge.toURL);
+						var toNode = new page.PageNode(edge.toURL);
 						cypher.createPageNode(toNode, false, function() {
-							cypher.createEdge(body.edge, visit, cb);
+							cypher.createEdge(edge, false, cb);
 						});
 					}
 				};
-				cypher.getPageNodeByUrl(body.edge.toURL, getPageNodeCallback);
+				cypher.getPageNodeByUrl(edge.toURL, getPageNodeCallback);
 			}
 		};
-		cypher.getEdgeByUrls(body.edge.toURL, body.edge.fromURL, doesEdgeExistCallback);
+		cypher.getEdgeByUrls(edge.toURL, edge.fromURL, doesEdgeExistCallback);
 	} else {
 		cb({'error':'edge required'});
 	}
 };
 
-var getPageNode = function(body, cb) {
-	if (body.url !== null) {
-		cypher.getPageNodeByUrl(body.url, cb);
+var updatePageNode = function(pageNode, cb) {
+	if (pageNode !== null) {
+		cypher.updatePageNode(pageNode, false, cb);
+	} else {
+		cb({'error':'pageNode required'});
+	}
+};
+
+var updateEdge = function(edge, cb) {
+	if (edge !== null) {
+		cypher.updateEdge(edge, false, cb);
+	} else {
+		cb({'error':'edge required'});
+	}
+};
+
+var getPageNode = function(url, cb) {
+	if (url !== null) {
+		cypher.getPageNodeByUrl(url, cb);
 	} else {
 		cb({'error':'url required'});
 	}
 };
 
-var getEdge = function(body, cb) {
-	if (body.fromURL !== null && body.toURL != null) {
-		cypher.getEdgeByUrls(body.toURL, body.fromURL, cb);
+var getEdge = function(fromURL, toURL, cb) {
+	if (fromURL !== null && toURL != null) {
+		cypher.getEdgeByUrls(toURL, fromURL, cb);
 	} else {
 		cb({'error':'fromURL and toURL required'});
 	}
-};-
-
-var visitPageNode = function(body, cb) {
-	updatePageNode(body, cb, true);
 };
 
-var visitEdge = function(body, cb) {
-	updateEdge(body, cb, true);
+var visitPageNode = function(pageNode, cb) {
+	if (pageNode !== null) {
+		var doesPageNodeExistCallback = function(responseNode) {
+			if (responseNode !== null) {
+				cypher.updatePageNode(pageNode, true, cb);
+			} else {
+				cypher.createPageNode(pageNode, true, cb);
+			}
+		};
+		cypher.getPageNodeByUrl(pageNode.url, doesPageNodeExistCallback);
+	} else {
+		cb({'error':'pageNode required'});
+	}
+};
+
+var visitEdge = function(edge, cb) {
+	if (edge !== null) {
+		var doesEdgeExistCallback = function(responseEdge) {
+			if (responseEdge !== null) {
+				cypher.updateEdge(edge, true, cb);
+			} else {
+				var getPageNodeCallback = function (pageNode) {
+					if (pageNode !== null) {
+						cypher.createEdge(edge, true, cb);
+					} else {
+						var toNode = new page.PageNode(edge.toURL);
+						cypher.createPageNode(toNode, false, function() {
+							cypher.createEdge(edge, true, cb);
+						});
+					}
+				};
+				cypher.getPageNodeByUrl(edge.toURL, getPageNodeCallback);
+			}
+		};
+		cypher.getEdgeByUrls(edge.toURL, edge.fromURL, doesEdgeExistCallback);
+	} else {
+		cb({'error':'edge required'});
+	}
 };
 
 module.exports = {
+	'getGraph': getGraph,
 	'createPageNode': createPageNode,
 	'createEdge': createEdge,
 	'updatePageNode': updatePageNode,

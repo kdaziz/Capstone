@@ -27,6 +27,14 @@ var query = function(queryString, callback, params) {
 	request.post(req, cb);
 };
 
+var getGraph = function(callback) {
+	var queryString = "match (p:Page) optional match path = (p1:Page)-[]-(p2:Page) where p1.visitCount>0" +
+	    " unwind nodes(path) as n unwind rels(path) as r" +
+		" return {nodes: collect(distinct p), " +
+		" links: collect(DISTINCT {source: startNode(r).url, target: endNode(r).url, visitCount: r.visitCount})}";
+	query(queryString, callback);
+}
+
 var updatePageNode = function(pageNode, visit, callback) {
 	var visitCount = visit ? "n.visitCount+1" : "n.visitCount";
 	var matchNode = "MATCH (n:Page) WHERE n.url = {url} " +
@@ -72,7 +80,6 @@ var getEdgeByUrls = function(toURL, fromURL, callback) {
 
 var createEdge = function(edge, visit, callback) {
 	edge.visitCount = visit ? 1 : 0; 
-	console.log(edge);
 	var queryString = "MATCH (n1:Page) WHERE n1.url = {fromURL} MATCH (n2:Page) WHERE n2.url = {toURL} " +
 					  "CREATE (n1)-[e:LINK {title:{title}, context:{context}, visitCount:{visitCount}}]->(n2) " +
 					  "RETURN e";
@@ -90,6 +97,7 @@ var updateEdge = function(edge, visit, callback) {
 
 
 module.exports = {
+	getGraph: getGraph,
 	getPageNodeByUrl: getPageNodeByUrl,
 	createPageNode: createPageNode,
 	updatePageNode: updatePageNode,

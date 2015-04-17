@@ -17,30 +17,25 @@ var api = require('./api.js'),
   Spins up the local server. Run by calling "node server.js"
   */
 var app = express();
+
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Origin");
+  next();
+});
+
 app.use(bodyParser.json());
 
-app.post('/api/createPageNode', function(req,res) {
-  	api.createPageNode(req.body, writeResponseCB(res));
+app.get('/api/graph', function(req,res) {
+  api.getGraph(writeResponseCB(res));
 });
 
-app.post('/api/createEdge', function(req,res) {
-  	api.createEdge(req.body, writeResponseCB(res));
+app.get('/api/getPageNode', function(req,res) {
+  	api.getPageNode(req.query.url, writeResponseCB(res));
 });
 
-app.post('/api/updatePageNode', function(req,res) {
-  	api.updatePageNode(req.body, writeResponseCB(res));
-});
-
-app.post('/api/updateEdge', function(req,res) {
-  	api.updateEdge(req.body, writeResponseCB(res));
-});
-
-app.post('/api/getPageNode', function(req,res) {
-  	api.getPageNode(req.body, writeResponseCB(res));
-});
-
-app.post('/api/getEdge', function(req,res) {
-  	api.getEdge(req.body, writeResponseCB(res));
+app.get('/api/getEdge', function(req,res) {
+  	api.getEdge(req.query.fromURL, req.query.toURL, writeResponseCB(res));
 });
 
 app.post('/api/visitPageNode', function(req,res) {
