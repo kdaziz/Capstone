@@ -1,0 +1,205 @@
+<!doctype html>
+<!-- Home.html - Frontend home for capstone -->
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Honors Capstone</title>
+  <meta name="description" content="Honors Capstone Frontend Home">
+  <meta name="author" content="Kevin Daniel Aziz">
+
+  <link rel="stylesheet" href="resources/bootstrap-3.3.4-dist/css/bootstrap.min.css">
+	<style>
+	.node {
+	  stroke: #fff;
+	  stroke-width: 1.5px;
+	}
+
+	.link {
+	  fill: none;
+	  stroke: #bbb;
+	}
+	body { padding-top: 80px; }
+	</style>
+</head>
+
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+      	<span><h1 style="color:white">Browsing Graph</h1></span>
+      </div>
+    </nav>
+
+    <div class="container">
+    	<div class="graphVis col-xs-8"></div>
+	    <div class="container col-xs-4" style="float:right">
+	    	<div class="panel panel-primary">
+	            <div class="panel-heading">
+	              <h3 class="panel-title">Filter Graph Content</h3>
+	            </div>
+	            <div class="panel-body">
+	              <label for="min-viewcount">Minimum Visits</label>
+	              <input type="number" id="min-viewcount" value=1>
+	              <label for="only-grouped">Only show connected nodes</label>
+	              <input type="checkbox" id="only-grouped">
+	            </div>
+	        </div>
+		    <div class="panel panel-primary" id="node-details">
+		    	<div class="panel-heading">
+		    		<h3 class=:"panelTitle">Node Details</h3>
+		    	</div>
+		    	<div class="panel-body">
+		    		<label>URL:</label><p id="node-url"></p>
+		    		<label>Visits:</label><p id="node-visit-count"></p>
+		    	</div>
+		    </div>
+	    </div>
+    </div>
+
+
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="resources/bootstrap-3.3.4-dist/js/bootstrap.min.js"></script>
+
+	<script src="resources/d3/d3.min.js" charset="utf-8"></script>
+	<script>
+		var request = new XMLHttpRequest();
+		request.open("GET", "http://localhost:8080/api/graph", true);
+		request.setRequestHeader('Access-Control-Allow-Origin', 'file://');
+		request.onreadystatechange = function() {
+		  if (request.readyState == 4 && request.status == 200) {
+		      cb(JSON.parse(request.response));
+		    }
+		};
+		request.send();
+		var currentGraph;
+		var cb = function(response) {
+		  graph = response.results[0].data[0].row[0] || {};
+		  currentGraph = graph;
+		  drawGraph(graph);
+		}
+
+		var width = 860,
+		    height = 500;
+
+		var color20 = d3.scale.category20();
+		var color = function(n) {
+			switch(n) {
+				case n<2:
+					return "#c6dbef";
+				case n<3:
+					return "#9ecae1";
+				case n<4:
+					return "#6baed6";
+				default:
+					return "#3182bd";
+			}
+		}
+		var force = d3.layout.force()
+		    .linkDistance(10)
+		    .linkStrength(2)
+		    .size([width, height]);
+
+		var svg = d3.select(".graphVis").append("svg")
+		    .attr("width", width)
+		    .attr("height", height);
+
+		var drawGraph = function(graph, showSingle, minViews) {
+			showSingle = showSingle!==null ? showSingle : true;
+			minViews = minViews || 1;
+			graph.nodes = graph.nodes.filter(function(n) {
+				return n.visitCount >= minViews;
+			});
+		  var nodes = graph.nodes.slice(),
+		      links = [],
+		      bilinks = [];
+		  var urlToIndex = {};
+		  var nextGroup = 1;
+		  var group = function(i,j){
+		  	if (nodes[i].group == undefined && nodes[j].group == undefined) {
+		  		nodes[i].group = nextGroup;
+		  		nodes[j].group = nextGroup;
+		  		nextGroup++;
+		  	} else if (nodes[i].group == undefined) {
+		  		nodes[i].group = nodes[j].group;
+		  	} else {
+		  		nodes[j].group = nodes[i].group;
+		  	}
+		  }
+		  for (var i in nodes) {
+		  	urlToIndex[nodes[i].url] = i;
+		  }
+		  graph.links.forEach(function(link) {
+		    var s = nodes[urlToIndex[link.source]],
+		        t = nodes[urlToIndex[link.target]],
+		        i = {}; // intermediate node
+			if (s!=undefined && t!=undefined) {
+			    group(urlToIndex[link.source],urlToIndex[link.target]);
+			    nodes.push(i);
+			    links.push({source: s, target: i, weight: link.valueCount}, {source: i, target: t, weight: link.valueCount});
+			    bilinks.push([s, i, t]);
+			}
+		  });
+
+		  force
+		      .nodes(nodes)
+		      .links(links)
+		      .start();
+
+		  var link = svg.selectAll(".link")
+		      .data(bilinks)
+		    .enter().append("path")
+		      .attr("class", "link")
+      		.style("stroke-width", function(d) { return Math.sqrt(d.visitCount); });
+
+		  var node = svg.selectAll(".node")
+		      .data(graph.nodes)
+		    .enter().append("circle")
+		      .attr("class", "node")
+		      .attr("r", function(d) { return 4+1*d.visitCount})
+		      .style("fill", function(d) { return color20(d.group || 0); })
+		      .call(force.drag)
+		      .on("click", function(d) {
+		      	if (document.getElementById('node-details').hidden) {
+		      		document.getElementById('node-details').hidden = false;
+		      	}
+		      	document.getElementById('node-url').innerText = d.url;
+		      	document.getElementById('node-visit-count').innerText = d.visitCount;
+		      });
+
+		  node.append("title")
+		      .text(function(d) { return d.name; });
+
+		  force.on("tick", function() {
+		    link.attr("d", function(d) {
+		      return "M" + d[0].x + "," + d[0].y
+		          + "S" + d[1].x + "," + d[1].y
+		          + " " + d[2].x + "," + d[2].y;
+		    });
+		    node.attr("transform", function(d) {
+		      return "translate(" + d.x + "," + d.y + ")";
+		    });
+		  });
+		  
+		document.getElementById('node-details').hidden = true;
+		};
+
+
+		// Register click functions for menu items
+		document.getElementById('node-details').hidden = true;
+		document.getElementById('min-viewcount').onchange = function() {
+			drawGraph(currentGraph, document.getElementById('only-grouped').value,
+				document.getElementById('min-viewcount').value);
+		};
+		document.getElementById('only-grouped').onchange = function() {
+			window.console.log('a');
+			drawGraph(currentGraph, document.getElementById('only-grouped').value,
+				document.getElementById('min-viewcount').value);
+		};
+	</script>
+
+
+
+</body>
+</html>
