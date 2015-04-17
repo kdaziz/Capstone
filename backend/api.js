@@ -89,6 +89,10 @@ var getEdge = function(fromURL, toURL, cb) {
 
 var visitPageNode = function(pageNode, cb) {
 	if (pageNode !== null) {
+		if (pageNode.url == null) {
+			cb({'error':'pageNode requires url'});
+			return;
+		}
 		var doesPageNodeExistCallback = function(responseNode) {
 			if (responseNode !== null) {
 				cypher.updatePageNode(pageNode, true, cb);
@@ -105,6 +109,10 @@ var visitPageNode = function(pageNode, cb) {
 var visitEdge = function(edge, cb) {
 	if (edge !== null) {
 		var doesEdgeExistCallback = function(responseEdge) {
+			if (edge.toURL ==null || edge.fromURL ==null) {
+				cb({'error':'edge requires toURL and fromURL'});
+				return;
+			}
 			if (responseEdge !== null) {
 				cypher.updateEdge(edge, true, cb);
 			} else {

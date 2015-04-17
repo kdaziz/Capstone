@@ -39,11 +39,11 @@ app.get('/api/getEdge', function(req,res) {
 });
 
 app.post('/api/visitPageNode', function(req,res) {
-  	api.visitPageNode(req.body, writeResponseCB(res));
+  	api.visitPageNode(req.body.pageNode, writeResponseCB(res));
 });
 
 app.post('/api/visitEdge', function(req,res) {
-  	api.visitEdge(req.body, writeResponseCB(res));
+  	api.visitEdge(req.body.edge, writeResponseCB(res));
 });
 
 app.listen(8080, '127.0.0.1');

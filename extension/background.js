@@ -22,6 +22,7 @@ chrome.browserAction.onClicked.addListener(function() {
 chrome.extension.onMessage.addListener(messageListener);
 
 function messageListener (m) {
+	window.console.log(m);
 	if (__RECORDING_ACTIVE__) {
 		if (m.type == "pageload") {
 			var pageNode = new PageNode(m.url, m.title);

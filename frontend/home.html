@@ -43,9 +43,10 @@
 	              <input type="number" id="min-viewcount" value=1>
 	              <label for="only-grouped">Only show connected nodes</label>
 	              <input type="checkbox" id="only-grouped">
+	              <button type="submit" class="button button-default button-primary" id="redraw-graph">Redraw Graph</button> <label for="redraw-graph" id="redraw-label" hidden=true>Redrawing... Please Wait...</label>
 	            </div>
 	        </div>
-		    <div class="panel panel-primary" id="node-details">
+		    <div class="panel panel-primary" id="node-details" hidden=true>
 		    	<div class="panel-heading">
 		    		<h3 class=:"panelTitle">Node Details</h3>
 		    	</div>
@@ -64,21 +65,21 @@
 
 	<script src="resources/d3/d3.min.js" charset="utf-8"></script>
 	<script>
-		var request = new XMLHttpRequest();
-		request.open("GET", "http://localhost:8080/api/graph", true);
-		request.setRequestHeader('Access-Control-Allow-Origin', 'file://');
-		request.onreadystatechange = function() {
-		  if (request.readyState == 4 && request.status == 200) {
-		      cb(JSON.parse(request.response));
-		    }
+		var getGraph = function() {
+			var request = new XMLHttpRequest();
+			request.open("GET", "http://localhost:8080/api/graph", true);
+			request.setRequestHeader('Access-Control-Allow-Origin', 'file://');
+			request.onreadystatechange = function() {
+			  if (request.readyState == 4 && request.status == 200) {
+			      cb(JSON.parse(request.response));
+			    }
+			};
+			request.send();
+			var cb = function(response) {
+			  graph = response.results[0].data[0].row[0] || {};
+			  drawGraph(graph);
+			}
 		};
-		request.send();
-		var currentGraph;
-		var cb = function(response) {
-		  graph = response.results[0].data[0].row[0] || {};
-		  currentGraph = graph;
-		  drawGraph(graph);
-		}
 
 		var width = 860,
 		    height = 500;
@@ -96,18 +97,22 @@
 					return "#3182bd";
 			}
 		}
-		var force = d3.layout.force()
-		    .linkDistance(10)
-		    .linkStrength(2)
-		    .size([width, height]);
 
-		var svg = d3.select(".graphVis").append("svg")
-		    .attr("width", width)
-		    .attr("height", height);
 
-		var drawGraph = function(graph, showSingle, minViews) {
-			showSingle = showSingle!==null ? showSingle : true;
-			minViews = minViews || 1;
+		var drawGraph = function(graph,minViews) {
+
+
+			var force = d3.layout.force()
+			    .linkDistance(10)
+			    .linkStrength(2)
+			    .size([width, height]);
+			d3.select("svg").remove();
+			var svg = d3.select(".graphVis").append("svg")
+			    .attr("width", width)
+			    .attr("height", height);
+
+			groupedOnly = document.getElementById('only-grouped').checked;
+			minViews = document.getElementById('min-viewcount').value;
 			graph.nodes = graph.nodes.filter(function(n) {
 				return n.visitCount >= minViews;
 			});
@@ -127,9 +132,11 @@
 		  		nodes[j].group = nodes[i].group;
 		  	}
 		  }
+		  
 		  for (var i in nodes) {
 		  	urlToIndex[nodes[i].url] = i;
 		  }
+
 		  graph.links.forEach(function(link) {
 		    var s = nodes[urlToIndex[link.source]],
 		        t = nodes[urlToIndex[link.target]],
@@ -141,7 +148,8 @@
 			    bilinks.push([s, i, t]);
 			}
 		  });
-
+		  
+		  window.console.log(nodes);
 		  force
 		      .nodes(nodes)
 		      .links(links)
@@ -181,22 +189,22 @@
 		      return "translate(" + d.x + "," + d.y + ")";
 		    });
 		  });
-		  
+		if (groupedOnly) {
+			d3.selectAll('.node').filter(function(d) {
+				return d.group == undefined;
+			}).attr('hidden',true);
+		}
 		document.getElementById('node-details').hidden = true;
+		document.getElementById('redraw-label').hidden = true;
 		};
 
 
 		// Register click functions for menu items
-		document.getElementById('node-details').hidden = true;
-		document.getElementById('min-viewcount').onchange = function() {
-			drawGraph(currentGraph, document.getElementById('only-grouped').value,
-				document.getElementById('min-viewcount').value);
-		};
-		document.getElementById('only-grouped').onchange = function() {
-			window.console.log('a');
-			drawGraph(currentGraph, document.getElementById('only-grouped').value,
-				document.getElementById('min-viewcount').value);
-		};
+		document.getElementById('redraw-graph').onclick = function() {
+			document.getElementById('redraw-label').hidden = false;
+			getGraph();
+		}
+		getGraph();
 	</script>
 
 

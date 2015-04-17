@@ -22,11 +22,13 @@ function onLinkClick(e) {
 	var elem;
 	if (e.srcElement) elem = e.srcElement;
 	else elem = e.target; 
-	chrome.extension.sendMessage(
-		{"type":"linkclicked",
-		 "from":document.URL,
-		 "to": elem.href,
-		 "context": elem.innerHTML,
-		 "title": elem.title,
-		});
+	window.onbeforeunload = function() {
+		chrome.extension.sendMessage(
+			{"type":"linkclicked",
+			 "from":window.location.href,
+			 "to": elem.href,
+			 "context": elem.innerText,
+			 "title": elem.title,
+			});
+	}
 }
